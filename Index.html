@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dalston Departures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --panel: #111418;
+    --border: #1e2530;
+    --orange: #f97316;
+    --yellow: #fbbf24;
+    --green: #22c55e;
+    --red: #ef4444;
+    --muted: #4a5568;
+    --text: #e2e8f0;
+    --subtext: #94a3b8;
+    --mildmay: #9333ea;
+    --windrush: #0ea5e9;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px);
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* ── Setup screen ── */
+  #setupScreen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    padding: 30px 20px;
+    overflow-y: auto;
+  }
+  #setupScreen h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--orange);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  #setupScreen .subtitle {
+    color: var(--subtext);
+    font-size: 0.78rem;
+    line-height: 1.7;
+    margin-bottom: 22px;
+  }
+  .setup-step {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .setup-step h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    margin-bottom: 8px;
+  }
+  .setup-step p {
+    font-size: 0.72rem;
+    color: var(--subtext);
+    margin-bottom: 10px;
+    line-height: 1.7;
+  }
+  .setup-step a { color: var(--orange); text-decoration: none; }
+  .setup-step input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    padding: 10px 12px;
+    outline: none;
+  }
+  .setup-step input:focus { border-color: var(--orange); }
+  .btn-go {
+    width: 100%;
+    padding: 14px;
+    background: var(--orange);
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  #keyError {
+    color: var(--red);
+    font-size: 0.7rem;
+    margin-top: 8px;
+    display: none;
+    line-height: 1.5;
+  }
+
+  /* ── Main board ── */
+  #mainBoard { display: none; }
+  .header {
+    background: var(--panel);
+    border-bottom: 2px solid var(--orange);
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .header-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    color: var(--orange);
+    line-height: 1;
+  }
+  .header-title span {
+    color: var(--subtext);
+    font-size: 1rem;
+    font-family: 'Share Tech Mono', monospace;
+    margin-left: 6px;
+  }
+  .clock { font-size: 1.6rem; color: var(--yellow); letter-spacing: 0.05em; }
+  .status-bar {
+    font-size: 0.62rem;
+    color: var(--muted);
+    padding: 5px 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+    animation: blink 2s infinite;
+  }
+  .dot.loading { background: var(--yellow); }
+  .dot.error   { background: var(--red); animation: none; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+  .station-block {
+    margin: 12px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .station-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .line-pill {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    color: #fff;
+  }
+  .line-mildmay  { background: var(--mildmay); }
+  .line-windrush { background: var(--windrush); }
+  .station-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    letter-spacing: 0.08em;
+  }
+  .direction-group { border-bottom: 1px solid var(--border); }
+  .direction-group:last-child { border-bottom: none; }
+  .dir-label {
+    padding: 6px 14px;
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .train-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(30,37,48,0.5);
+    gap: 10px;
+  }
+  .train-row:last-child { border-bottom: none; }
+  .train-dest {
+    font-size: 1rem;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .train-time { text-align: right; white-space: nowrap; }
+  .mins {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+  .mins.due    { color: var(--red); }
+  .mins.soon   { color: var(--yellow); }
+  .mins.normal { color: var(--green); }
+  .mins-lbl { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-top: -2px; }
+  .abs-time { font-size: 0.72rem; color: var(--subtext); }
+
+  .msg { padding: 16px 14px; text-align: center; color: var(--muted); font-size: 0.8rem; }
+  .msg.err { color: var(--red); font-size: 0.75rem; line-height: 1.6; }
+
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .bottom-bar {
+    display: flex;
+    gap: 8px;
+    margin: 0 10px 14px;
+  }
+  .refresh-btn {
+    flex: 1;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .refresh-btn:active { border-color: var(--orange); color: var(--orange); }
+  .refresh-btn:disabled { opacity: 0.4; }
+  .settings-btn {
+    padding: 12px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+    font-size: 1rem;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── SETUP ──────────────────────────────────────────────────────────────── -->
+<div id="setupScreen">
+  <h1>DALSTON<br>DEPARTURES</h1>
+  <p class="subtitle">One-time setup. Your API key is saved on this device only.</p>
+
+  <div class="setup-step">
+    <h3>Your TfL API Key</h3>
+    <p>
+      Get a free key at <a href="https://api-portal.tfl.gov.uk" target="_blank">api-portal.tfl.gov.uk</a> →
+      Sign up → confirm email → sign in → <strong>Products</strong> → subscribe to the free plan →
+      <strong>Profile</strong> → copy your <strong>Primary key</strong>.
+    </p>
+    <input type="text" id="keyInput" placeholder="Paste your TfL app_key here…"
+      autocomplete="off" autocorrect="off" spellcheck="false">
+    <div id="keyError">That doesn't look like a valid key — it should be a long string of letters and numbers with no spaces.</div>
+    <button class="btn-go" onclick="saveAndStart()">START THE BOARD</button>
+  </div>
+</div>
+
+<!-- ── BOARD ──────────────────────────────────────────────────────────────── -->
+<div id="mainBoard">
+  <div class="header">
+    <div class="header-title">DALSTON <span>departures</span></div>
+    <div class="clock" id="clock">--:--</div>
+  </div>
+  <div class="status-bar">
+    <span class="dot loading" id="dot"></span>
+    <span id="statusTxt">fetching live data…</span>
+  </div>
+
+  <div class="station-block">
+    <div class="station-header">
+      <span class="line-pill line-mildmay">MILDMAY</span>
+      <span class="station-name">Dalston Kingsland</span>
+    </div>
+    <div class="direction-group" id="dkE">
+      <div class="dir-label">→ &nbsp;Eastbound · Stratford / Chingford</div>
+      <div class="msg"><span class="spinner"></span>Loading…</div>
+    </div>
+    <div class="direction-group" id="dkW">
+      <div class="dir-label">← &nbsp;Westbound · Highbury &amp; Islington</div>
+      <div class="msg"><span class="spinner"></span>Loading…</div>
+    </div>
+  </div>
+
+  <div class="station-block">
+    <div class="station-header">
+      <span class="line-pill line-windrush">WINDRUSH</span>
+      <span class="station-name">Dalston Junction</span>
+    </div>
+    <div class="direction-group" id="djN">
+      <div class="dir-label">↑ &nbsp;Northbound · Highbury &amp; Islington</div>
+      <div class="msg"><span class="spinner"></span>Loading…</div>
+    </div>
+    <div class="direction-group" id="djS">
+      <div class="dir-label">↓ &nbsp;Southbound · New Cross / Croydon</div>
+      <div class="msg"><span class="spinner"></span>Loading…</div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <button class="refresh-btn" id="refreshBtn" onclick="fetchAll()">↻ &nbsp;Refresh</button>
+    <button class="settings-btn" title="Change API key" onclick="showSetup()">⚙</button>
+  </div>
+</div>
+
+<script>
+const STOPS = { dk: '910GDALSKLD', dj: '910GDALS' };
+
+const E_KEYS = ['stratford','chingford','enfield','highams park','walthamstow','edmonton','blackhorse','southbury','bush hill','tottenham','gospel oak'];
+const W_KEYS = ['highbury','clapham','richmond','watford','stansted','milton keynes'];
+const N_KEYS = ['highbury'];
+const S_KEYS = ['new cross','crystal palace','croydon','clapham junction','sydenham','penge','anerley','norwood','brockley','honor oak','forest hill'];
+
+function matchKeys(t, keys) {
+  const s = ((t.destinationName||'')+(t.towards||'')).toLowerCase();
+  return keys.some(k => s.includes(k));
+}
+function splitDir(trains, kA, kB) {
+  const a=[], b=[];
+  trains.forEach(t => {
+    if (matchKeys(t,kA)) a.push(t);
+    else if (matchKeys(t,kB)) b.push(t);
+    else { const p=(t.platformName||'').toLowerCase(); (p.includes('2')||p.includes('east')||p.includes('north')?a:b).push(t); }
+  });
+  return [a, b];
+}
+
+// Clock
+function tickClock() {
+  const el = document.getElementById('clock');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+tickClock(); setInterval(tickClock, 1000);
+
+// Key management
+function getKey() { return localStorage.getItem('tflKey') || ''; }
+
+function saveAndStart() {
+  const v = document.getElementById('keyInput').value.trim();
+  if (v.length < 20 || v.includes(' ')) {
+    document.getElementById('keyError').style.display = 'block'; return;
+  }
+  localStorage.setItem('tflKey', v);
+  document.getElementById('keyError').style.display = 'none';
+  startBoard();
+}
+
+function showSetup() {
+  document.getElementById('keyInput').value = getKey();
+  document.getElementById('setupScreen').style.display = 'flex';
+  document.getElementById('mainBoard').style.display = 'none';
+}
+
+function startBoard() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('mainBoard').style.display = 'block';
+  fetchAll();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (localStorage.getItem('tflKey') !== null) {
+    document.getElementById('keyInput').value = getKey();
+    startBoard();
+  }
+});
+
+// Fetch
+async function fetchArrivals(stopId) {
+  const key = getKey();
+  if (!key) throw new Error('No API key set — tap ⚙ to add one');
+  const url = `https://api.tfl.gov.uk/StopPoint/${stopId}/Arrivals?mode=overground&app_key=${encodeURIComponent(key)}`;
+  const res = await fetch(url);
+  if (res.status === 401 || res.status === 403) throw new Error('API key rejected — tap ⚙ to update it');
+  if (!res.ok) throw new Error(`TfL error ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error('Unexpected TfL response');
+  return data;
+}
+
+function renderRows(trains) {
+  if (!trains.length) return '<div class="msg">No upcoming trains</div>';
+  return trains.slice(0,4).map(t => {
+    const mins = Math.round(t.timeToStation/60);
+    const cls  = mins<=1?'due':mins<=4?'soon':'normal';
+    const lbl  = mins<=1?'DUE':String(mins);
+    const unit = mins<=1?'':'min';
+    const abs  = t.expectedArrival ? new Date(t.expectedArrival).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+    const dest = (t.destinationName||t.towards||'—').replace(/ (Underground|Rail|Overground) Station/g,'');
+    return `<div class="train-row">
+      <div class="train-dest">${dest}</div>
+      <div class="train-time">
+        <div class="mins ${cls}">${lbl}</div>
+        <div class="mins-lbl">${unit}</div>
+        ${abs?`<div class="abs-time">${abs}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setSection(id, html) {
+  const el = document.getElementById(id);
+  const lbl = el.querySelector('.dir-label').cloneNode(true);
+  el.innerHTML = ''; el.appendChild(lbl);
+  el.insertAdjacentHTML('beforeend', html);
+}
+
+let timer = null;
+async function fetchAll() {
+  const dot = document.getElementById('dot');
+  const txt = document.getElementById('statusTxt');
+  const btn = document.getElementById('refreshBtn');
+  if (!dot) return;
+  dot.className='dot loading'; txt.textContent='fetching…'; if(btn) btn.disabled=true;
+
+  try {
+    const [dk, dj] = await Promise.all([fetchArrivals(STOPS.dk), fetchArrivals(STOPS.dj)]);
+    dk.sort((a,b)=>a.timeToStation-b.timeToStation);
+    dj.sort((a,b)=>a.timeToStation-b.timeToStation);
+    const [dkE,dkW] = splitDir(dk, E_KEYS, W_KEYS);
+    const [djN,djS] = splitDir(dj, N_KEYS, S_KEYS);
+    setSection('dkE', renderRows(dkE)); setSection('dkW', renderRows(dkW));
+    setSection('djN', renderRows(djN)); setSection('djS', renderRows(djS));
+    dot.className='dot';
+    txt.textContent=`Updated ${new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})} · refreshes every 60s`;
+  } catch(err) {
+    dot.className='dot error'; txt.textContent=err.message;
+    ['dkE','dkW','djN','djS'].forEach(id => setSection(id, `<div class="msg err">⚠ ${err.message}</div>`));
+  }
+  if(btn) btn.disabled=false;
+  if(timer) clearInterval(timer);
+  timer = setInterval(fetchAll, 60000);
+}
+</script>
+</body>
+</html>
